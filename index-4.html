@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hassan Fitness Hub | Calisthenics Equipment</title>
+  <meta name="description" content="Premium parallettes, parallel bars, resistance bands and calisthenics gear. Shop quality fitness equipment in Nigeria." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            yellow: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04' }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Firebase SDK (compat for easy single-file use) -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #facc15; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #eab308; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: #111; color: #fff; padding: 12px 20px; border-radius: 10px;
+      font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      transform: translateY(100px); opacity: 0; transition: all 0.3s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .page { display: none; }
+    .page.active { display: block; }
+  </style>
+</head>
+<body class="bg-white min-h-screen flex flex-col antialiased">
+
+  <!-- NAVBAR -->
+  <nav class="bg-white border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <a href="#" onclick="showPage('home'); return false;" class="flex items-center gap-2">
+          <div class="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center font-bold text-black text-xl">H</div>
+          <span class="font-bold text-xl text-gray-900 hidden sm:block">Hassan Fitness Hub</span>
+        </a>
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#" onclick="showPage('home'); return false;" class="text-gray-700 hover:text-yellow-600 font-medium transition">Home</a>
+          <a href="#" onclick="showPage('shop'); return false;" class="text-gray-700 hover:text-yellow-600 font-medium transition">Shop</a>
+          <a href="#" onclick="showPage('cart'); return false;" class="relative text-gray-700 hover:text-yellow-600 font-medium transition flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+            Cart
+            <span id="cart-badge" class="absolute -top-2 -right-4 bg-yellow-400 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+          </a>
+          <a href="#" onclick="showPage('admin'); return false;" class="text-sm text-gray-500 hover:text-yellow-600 transition">Admin</a>
+        </div>
+        <button class="md:hidden p-2" onclick="toggleMobile()">
+          <svg id="menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-yellow-100 px-4 py-4 space-y-3">
+      <a href="#" onclick="showPage('home'); toggleMobile(); return false;" class="block py-2 text-gray-700 font-medium">Home</a>
+      <a href="#" onclick="showPage('shop'); toggleMobile(); return false;" class="block py-2 text-gray-700 font-medium">Shop</a>
+      <a href="#" onclick="showPage('cart'); toggleMobile(); return false;" class="block py-2 text-gray-700 font-medium">Cart (<span id="mobile-cart-count">0</span>)</a>
+      <a href="#" onclick="showPage('admin'); toggleMobile(); return false;" class="block py-2 text-gray-500 text-sm">Admin</a>
+    </div>
+  </nav>
+
+  <main class="flex-1">
+
+    <!-- HOME PAGE -->
+    <div id="page-home" class="page active">
+      <section class="bg-gradient-to-br from-yellow-400 via-yellow-300 to-yellow-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+          <div class="max-w-2xl">
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+              Level Up Your <span class="text-black">Calisthenics</span> Game
+            </h1>
+            <p class="text-lg text-gray-800 mb-8">
+              Premium parallettes, parallel bars, resistance bands and accessories. Built for athletes who take training seriously.
+            </p>
+            <div class="flex flex-wrap gap-4">
+              <button onclick="showPage('shop')" class="bg-black text-white px-8 py-3.5 rounded-lg font-semibold hover:bg-gray-800 transition flex items-center gap-2">
+                Shop Now →
+              </button>
+              <button onclick="showPage('shop')" class="bg-white text-black px-8 py-3.5 rounded-lg font-semibold hover:bg-gray-100 transition border border-black/10">
+                View All Products
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="py-12 bg-white border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50">
+              <div class="text-yellow-500 text-2xl">🏋️</div>
+              <div><h3 class="font-semibold text-gray-900">Premium Quality</h3><p class="text-sm text-gray-500">Durable materials built to last</p></div>
+            </div>
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50">
+              <div class="text-yellow-500 text-2xl">🚚</div>
+              <div><h3 class="font-semibold text-gray-900">Fast Delivery</h3><p class="text-sm text-gray-500">Nationwide shipping available</p></div>
+            </div>
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50">
+              <div class="text-yellow-500 text-2xl">🔒</div>
+              <div><h3 class="font-semibold text-gray-900">Secure Payment</h3><p class="text-sm text-gray-500">Pay on delivery available</p></div>
+            </div>
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50">
+              <div class="text-yellow-500 text-2xl">⭐</div>
+              <div><h3 class="font-semibold text-gray-900">Athlete Approved</h3><p class="text-sm text-gray-500">Trusted by calisthenics community</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between mb-10">
+            <div>
+              <h2 class="text-3xl font-bold text-gray-900">Featured Products</h2>
+              <p class="text-gray-500 mt-1">Our most popular calisthenics equipment</p>
+            </div>
+            <button onclick="showPage('shop')" class="hidden sm:flex items-center gap-1 text-yellow-600 font-medium hover:text-yellow-700">View all →</button>
+          </div>
+          <div id="featured-products" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="col-span-full text-center py-10 text-gray-400">Loading products...</div>
+          </div>
+          <div class="mt-10 text-center sm:hidden">
+            <button onclick="showPage('shop')" class="inline-flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-lg font-semibold">View All Products →</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-gray-900 py-16">
+        <div class="max-w-3xl mx-auto px-4 text-center">
+          <h2 class="text-3xl font-bold text-white mb-4">Ready to Train Like a Pro?</h2>
+          <p class="text-gray-400 mb-8">Browse our full collection of parallettes, bars, bands and more.</p>
+          <button onclick="showPage('shop')" class="inline-flex items-center gap-2 bg-yellow-400 text-black px-8 py-3.5 rounded-lg font-semibold hover:bg-yellow-300 transition">Explore Shop →</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- SHOP PAGE -->
+    <div id="page-shop" class="page">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-900">Shop</h1>
+          <p class="text-gray-500 mt-1">Browse our full range of calisthenics equipment</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+          <div class="relative flex-1">
+            <input id="search-input" type="text" placeholder="Search products..." oninput="renderShop()"
+              class="w-full pl-4 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+          </div>
+        </div>
+        <div class="flex flex-col lg:flex-row gap-8">
+          <aside class="lg:w-64 shrink-0 space-y-6">
+            <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+              <h3 class="font-semibold text-gray-900 mb-4">Category</h3>
+              <div id="category-filters" class="space-y-2"></div>
+            </div>
+          </aside>
+          <div class="flex-1">
+            <p id="product-count" class="text-sm text-gray-500 mb-4"></p>
+            <div id="shop-products" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div class="col-span-full text-center py-10 text-gray-400">Loading products...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CART PAGE -->
+    <div id="page-cart" class="page">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div id="cart-empty" class="text-center py-20 hidden">
+          <div class="text-6xl mb-4">🛒</div>
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
+          <p class="text-gray-500 mb-8">Looks like you haven't added anything yet.</p>
+          <button onclick="showPage('shop')" class="inline-flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-lg font-semibold hover:bg-yellow-500 transition">Continue Shopping →</button>
+        </div>
+        <div id="cart-content" class="hidden">
+          <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart (<span id="cart-count-title">0</span>)</h1>
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div id="cart-items" class="lg:col-span-2 space-y-4"></div>
+            <div class="lg:col-span-1">
+              <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm sticky top-24">
+                <h2 class="font-bold text-lg text-gray-900 mb-4">Order Summary</h2>
+                <div class="space-y-3 text-sm">
+                  <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span id="cart-subtotal" class="font-medium">₦0</span></div>
+                  <div class="flex justify-between"><span class="text-gray-500">Shipping</span><span class="font-medium text-green-600">Calculated at checkout</span></div>
+                  <div class="border-t pt-3 flex justify-between text-base"><span class="font-semibold">Total</span><span id="cart-total" class="font-bold text-lg">₦0</span></div>
+                </div>
+                <button onclick="showPage('checkout')" class="mt-6 w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-3.5 rounded-lg flex items-center justify-center gap-2 transition">Proceed to Checkout →</button>
+                <button onclick="showPage('shop')" class="mt-3 block w-full text-center text-sm text-gray-500 hover:text-yellow-600">Continue Shopping</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKOUT PAGE -->
+    <div id="page-checkout" class="page">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <button onclick="showPage('cart')" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-yellow-600 mb-6">← Back to Cart</button>
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <form id="checkout-form" onsubmit="placeOrder(event)" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+              <h2 class="font-semibold text-lg mb-4">Contact Information</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input required name="name" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input required type="email" name="email" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                  <input required name="phone" placeholder="08012345678" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                </div>
+              </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+              <h2 class="font-semibold text-lg mb-4">Shipping Address</h2>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
+                  <input required name="address" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">City / State *</label>
+                  <input required name="city" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Order Notes (optional)</label>
+                  <textarea name="notes" rows="3" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
+              <h3 class="font-semibold text-gray-900">Payment</h3>
+              <p class="text-sm text-gray-600 mt-1">Orders are placed as <strong>Pay on Delivery</strong> or bank transfer. We will contact you to confirm payment.</p>
+            </div>
+          </div>
+          <div>
+            <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm sticky top-24">
+              <h2 class="font-bold text-lg mb-4">Order Summary</h2>
+              <div id="checkout-items" class="space-y-3 max-h-60 overflow-y-auto mb-4"></div>
+              <div class="border-t pt-3 flex justify-between font-bold text-lg">
+                <span>Total</span><span id="checkout-total">₦0</span>
+              </div>
+              <button type="submit" id="place-order-btn" class="mt-6 w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-3.5 rounded-lg transition">Place Order</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ADMIN PAGE -->
+    <div id="page-admin" class="page">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div id="admin-login" class="min-h-[60vh] flex items-center justify-center">
+          <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+              <div class="w-14 h-14 bg-yellow-400 rounded-xl flex items-center justify-center font-bold text-2xl text-black mx-auto mb-4">H</div>
+              <h1 class="text-2xl font-bold text-gray-900">Admin Login</h1>
+              <p class="text-gray-500 text-sm mt-1">Hassan Fitness Hub Dashboard</p>
+            </div>
+            <form onsubmit="adminLogin(event)" class="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm space-y-5">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" required id="admin-email" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="admin@example.com" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" required id="admin-password" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="••••••••" />
+              </div>
+              <button type="submit" id="admin-login-btn" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg transition">Sign In</button>
+            </form>
+            <p class="text-center text-sm text-gray-500 mt-6">
+              <a href="#" onclick="showPage('home'); return false;" class="hover:text-yellow-600">← Back to store</a>
+            </p>
+          </div>
+        </div>
+
+        <div id="admin-dashboard" class="hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p class="text-sm text-gray-500" id="admin-email-display"></p>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="showPage('home')" class="text-sm text-gray-500 hover:text-yellow-600">View Store</button>
+              <button onclick="adminLogout()" class="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 font-medium">Logout</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+              <p class="text-2xl font-bold" id="admin-product-count">0</p>
+              <p class="text-xs text-gray-500">Products</p>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+              <p class="text-2xl font-bold" id="admin-order-count">0</p>
+              <p class="text-xs text-gray-500">Orders</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mb-6 border-b border-gray-100">
+            <button onclick="setAdminTab('products')" id="tab-products" class="px-4 py-2.5 text-sm font-medium border-b-2 border-yellow-400 text-yellow-700">Products</button>
+            <button onclick="setAdminTab('orders')" id="tab-orders" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500">Orders</button>
+          </div>
+
+          <div id="admin-products-tab">
+            <div class="flex flex-wrap gap-3 mb-6">
+              <button onclick="document.getElementById('add-product-modal').classList.remove('hidden')" class="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-4 py-2 rounded-lg text-sm">+ Add Product</button>
+              <button onclick="seedProducts()" id="seed-btn" class="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-medium px-4 py-2 rounded-lg text-sm">Seed Sample Products</button>
+            </div>
+            <div id="admin-products-list" class="overflow-x-auto"></div>
+          </div>
+
+          <div id="admin-orders-tab" class="hidden">
+            <div id="admin-orders-list" class="space-y-4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="add-product-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold">Add New Product</h2>
+          <button onclick="document.getElementById('add-product-modal').classList.add('hidden')" class="text-2xl leading-none">&times;</button>
+        </div>
+        <form onsubmit="addProduct(event)" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Name *</label>
+            <input required id="new-name" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Description *</label>
+            <textarea required id="new-desc" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">Price (₦) *</label>
+              <input required type="number" id="new-price" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Stock *</label>
+              <input required type="number" id="new-stock" value="10" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Category</label>
+            <select id="new-category" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400">
+              <option>Parallettes</option>
+              <option>Parallel Bars</option>
+              <option>Bands</option>
+              <option>Accessories</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Image URL</label>
+            <input id="new-image" placeholder="https://..." class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+          </div>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" id="new-featured" /> Featured product
+          </label>
+          <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg">Add Product</button>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-gray-900 text-white py-10 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-9 h-9 bg-yellow-400 rounded-lg flex items-center justify-center font-bold text-black">H</div>
+            <span class="font-bold text-lg">Hassan Fitness Hub</span>
+          </div>
+          <p class="text-gray-400 text-sm">Premium calisthenics and fitness equipment for athletes in Nigeria and beyond.</p>
+        </div>
+        <div>
+          <h4 class="font-semibold mb-3">Quick Links</h4>
+          <ul class="space-y-2 text-sm text-gray-400">
+            <li><a href="#" onclick="showPage('home'); return false;" class="hover:text-yellow-400">Home</a></li>
+            <li><a href="#" onclick="showPage('shop'); return false;" class="hover:text-yellow-400">Shop</a></li>
+            <li><a href="#" onclick="showPage('cart'); return false;" class="hover:text-yellow-400">Cart</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold mb-3">Contact</h4>
+          <p class="text-sm text-gray-400">Email: mabayojetemilola@gmail.com</p>
+          <p class="text-sm text-gray-400 mt-1">Built with love for fitness enthusiasts</p>
+        </div>
+      </div>
+      <div class="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-500">
+        © <span id="year"></span> Hassan Fitness Hub. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // ========== FIREBASE ==========
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7KGgRRPwDUDJuC7m3vsLBdQu0P_jckMk",
+      authDomain: "hassan-fitness-hub.firebaseapp.com",
+      projectId: "hassan-fitness-hub",
+      storageBucket: "hassan-fitness-hub.firebasestorage.app",
+      messagingSenderId: "1053109150100",
+      appId: "1:1053109150100:web:74db778a9bd2299acb2f81"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const ADMIN_EMAIL = "mabayojetemilola@gmail.com";
+
+    // Sample products (used if Firestore is empty)
+    const sampleProducts = [
+      { name: "Xtenia Wooden Parallettes + Carry Bag", description: "Premium wooden parallettes with comfortable round grips and sturdy metal base. Comes with a durable carry bag. Perfect for calisthenics, push-ups, L-sits and handstand training. Height: approx 15cm.", price: 28500, image: "https://images.unsplash.com/photo-1599058945522-28d584b6f14f?w=600&h=600&fit=crop", category: "Parallettes", stock: 25, featured: true },
+      { name: "Classic Wooden Parallettes", description: "Clean and minimalist solid wood parallettes. Smooth finish, excellent grip, and stable triangular base. Ideal for beginners and intermediate athletes. Lightweight yet strong.", price: 18500, image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600&h=600&fit=crop", category: "Parallettes", stock: 40, featured: true },
+      { name: "Gornation Parallettes + Grip Tapes Bundle", description: "Professional Gornation parallettes with wooden bars and black metal stands. Includes 4 premium overgrips. Great for serious training and competitions.", price: 42000, image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=600&fit=crop", category: "Parallettes", stock: 15, featured: true },
+      { name: "Coast Cafe Wooden Parallettes", description: "High-quality Coast Cafe branded wooden parallettes with thick grips. Stable base design for safe and effective training sessions.", price: 22000, image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=600&fit=crop", category: "Parallettes", stock: 30 },
+      { name: "Coast Cafe Resistance Bands Set (5pcs)", description: "Complete set of 5 resistance bands in different strengths (red, black, purple, blue, green). Perfect for assisted pull-ups, mobility work, and progressive training.", price: 12500, image: "https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=600&h=600&fit=crop", category: "Bands", stock: 50, featured: true },
+      { name: "Pro Metal Parallel Bars", description: "Heavy-duty black metal parallel bars with padded grips. Extremely stable and durable. Suitable for advanced calisthenics, dips, and planche training.", price: 55000, image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=600&fit=crop", category: "Parallel Bars", stock: 12, featured: true },
+      { name: "Adjustable Height Parallettes", description: "Versatile parallettes with multiple height settings. Wooden bars + black steel frame. Great for progressive training from beginner to advanced.", price: 38000, image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=600&h=600&fit=crop", category: "Parallettes", stock: 18 },
+      { name: "Wrist Wraps + Athletic Tape Combo", description: "Protective wrist wraps and professional athletic tape. Essential for heavy calisthenics training, handstands, and injury prevention.", price: 8500, image: "https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=600&h=600&fit=crop", category: "Accessories", stock: 60 },
+      { name: "Low Wooden Parallettes", description: "Low-profile solid wood parallettes ideal for push-ups, planche leans, and floor-based skills. Excellent balance and feel.", price: 16500, image: "https://images.unsplash.com/photo-1581009146145-b5ef050c27aa?w=600&h=600&fit=crop", category: "Parallettes", stock: 35 },
+      { name: "Heavy Duty Parallel Bars (Competition)", description: "Competition-grade parallel bars with thick padded grips and wide base. Built for serious athletes and gym use.", price: 68000, image: "https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=600&h=600&fit=crop", category: "Parallel Bars", stock: 8 },
+      { name: "Premium Grip Tape Pack (4pcs)", description: "High-quality overgrips for parallettes and bars. Improves grip, absorbs sweat, and extends the life of your equipment.", price: 4500, image: "https://images.unsplash.com/photo-1576678927484-cc907957088c?w=600&h=600&fit=crop", category: "Accessories", stock: 80 },
+      { name: "Coast Cafe Mini Parallettes", description: "Compact and portable wooden mini parallettes. Perfect for travel, home workouts, and beginners.", price: 14500, image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d904?w=600&h=600&fit=crop", category: "Parallettes", stock: 28 },
+      { name: "Steel Parallel Bars – Matte Black", description: "Sleek matte black steel parallel bars with excellent stability. Designed for dips, L-sits, and advanced static holds.", price: 48000, image: "https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=600&h=600&fit=crop", category: "Parallel Bars", stock: 14 },
+      { name: "Full Body Resistance Band Kit", description: "Complete resistance training kit with multiple band strengths, door anchor, and carrying pouch. Great complement to parallettes training.", price: 15500, image: "https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=600&h=600&fit=crop", category: "Bands", stock: 45 },
+      { name: "Pro Wrist Support Bundle", description: "Heavy-duty wrist wraps + compression sleeves. Maximum support for high-volume calisthenics and weighted training.", price: 9500, image: "https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=600&h=600&fit=crop", category: "Accessories", stock: 55 },
+    ];
+
+    let products = [];
+    let cart = JSON.parse(localStorage.getItem("hassan-cart") || "[]");
+    let currentCategory = "All";
+    let currentUser = null;
+
+    // ========== HELPERS ==========
+    function formatPrice(price) {
+      return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 }).format(price);
+    }
+
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 2500);
+    }
+
+    function saveCart() {
+      localStorage.setItem("hassan-cart", JSON.stringify(cart));
+      updateCartBadge();
+    }
+
+    function cartCount() {
+      return cart.reduce((s, i) => s + i.quantity, 0);
+    }
+
+    function cartTotal() {
+      return cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    }
+
+    function updateCartBadge() {
+      const count = cartCount();
+      const badge = document.getElementById("cart-badge");
+      const mobile = document.getElementById("mobile-cart-count");
+      if (count > 0) {
+        badge.textContent = count;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+      mobile.textContent = count;
+    }
+
+    // ========== NAV ==========
+    function showPage(name) {
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      document.getElementById("page-" + name).classList.add("active");
+      window.scrollTo(0, 0);
+      if (name === "shop") renderShop();
+      if (name === "cart") renderCart();
+      if (name === "checkout") renderCheckout();
+      if (name === "home") renderFeatured();
+      if (name === "admin") checkAdminAuth();
+    }
+
+    function toggleMobile() {
+      document.getElementById("mobile-menu").classList.toggle("hidden");
+    }
+
+    // ========== LOAD PRODUCTS ==========
+    // Always show sample products first so the store is never empty
+    function useSampleProducts() {
+      products = sampleProducts.map((p, i) => ({ ...p, id: "sample-" + i }));
+      renderFeatured();
+      renderShop();
+    }
+
+    async function loadProducts() {
+      // Show samples immediately
+      useSampleProducts();
+
+      // Then try Firebase in the background
+      try {
+        const snap = await db.collection("products").get();
+        if (!snap.empty) {
+          products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderFeatured();
+          renderShop();
+        }
+      } catch (err) {
+        console.error("Firebase not available, keeping sample products:", err);
+        // already showing samples, so do nothing
+      }
+    }
+
+    // ========== PRODUCTS UI ==========
+    function productCard(p) {
+      return `
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition overflow-hidden group">
+          <div class="relative aspect-square bg-gray-50 overflow-hidden">
+            <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+            ${p.featured ? '<span class="absolute top-3 left-3 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded">Featured</span>' : ''}
+          </div>
+          <div class="p-4">
+            <p class="text-xs text-yellow-600 font-medium uppercase tracking-wide mb-1">${p.category}</p>
+            <h3 class="font-semibold text-gray-900 line-clamp-2 mb-2 min-h-[3rem]">${p.name}</h3>
+            <p class="text-sm text-gray-500 line-clamp-2 mb-3">${p.description}</p>
+            <div class="flex items-center justify-between">
+              <span class="text-lg font-bold text-gray-900">${formatPrice(p.price)}</span>
+              <button onclick="addToCart('${p.id}')" class="bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition text-sm">
+                🛒 Add
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderFeatured() {
+      const featured = products.filter(p => p.featured).slice(0, 4);
+      const display = featured.length > 0 ? featured : products.slice(0, 4);
+      document.getElementById("featured-products").innerHTML = display.length
+        ? display.map(productCard).join("")
+        : `<div class="col-span-full text-center py-10 text-gray-400">No products yet</div>`;
+    }
+
+    function renderShop() {
+      const search = (document.getElementById("search-input")?.value || "").toLowerCase();
+      const cats = ["All", ...new Set(products.map(p => p.category))];
+      document.getElementById("category-filters").innerHTML = cats.map(c => `
+        <button onclick="currentCategory='${c}'; renderShop()" class="block w-full text-left px-3 py-2 rounded-lg text-sm transition ${currentCategory === c ? 'bg-yellow-400 text-black font-medium' : 'text-gray-600 hover:bg-gray-50'}">${c}</button>
+      `).join("");
+
+      const filtered = products.filter(p => {
+        const matchSearch = p.name.toLowerCase().includes(search) || (p.description || "").toLowerCase().includes(search);
+        const matchCat = currentCategory === "All" || p.category === currentCategory;
+        return matchSearch && matchCat;
+      });
+
+      document.getElementById("product-count").textContent = `Showing ${filtered.length} product${filtered.length !== 1 ? "s" : ""}`;
+      document.getElementById("shop-products").innerHTML = filtered.length
+        ? filtered.map(productCard).join("")
+        : `<div class="text-center py-20 col-span-full"><p class="text-gray-500 text-lg">No products found</p></div>`;
+    }
+
+    // ========== CART ==========
+    function addToCart(id) {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+      const existing = cart.find(i => i.id === id);
+      if (existing) {
+        existing.quantity += 1;
+        toast(`Updated quantity of ${product.name}`);
+      } else {
+        cart.push({ ...product, quantity: 1 });
+        toast(`${product.name} added to cart`);
+      }
+      saveCart();
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(i => i.id !== id);
+      toast("Item removed from cart");
+      saveCart();
+      renderCart();
+    }
+
+    function updateQty(id, delta) {
+      const item = cart.find(i => i.id === id);
+      if (!item) return;
+      item.quantity += delta;
+      if (item.quantity < 1) {
+        removeFromCart(id);
+        return;
+      }
+      saveCart();
+      renderCart();
+    }
+
+    function renderCart() {
+      const empty = document.getElementById("cart-empty");
+      const content = document.getElementById("cart-content");
+      if (cartCount() === 0) {
+        empty.classList.remove("hidden");
+        content.classList.add("hidden");
+        return;
+      }
+      empty.classList.add("hidden");
+      content.classList.remove("hidden");
+      document.getElementById("cart-count-title").textContent = cartCount();
+      document.getElementById("cart-subtotal").textContent = formatPrice(cartTotal());
+      document.getElementById("cart-total").textContent = formatPrice(cartTotal());
+      document.getElementById("cart-items").innerHTML = cart.map(item => `
+        <div class="bg-white border border-gray-100 rounded-xl p-4 flex gap-4 shadow-sm">
+          <div class="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 shrink-0">
+            <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900 truncate">${item.name}</h3>
+            <p class="text-sm text-gray-500 mt-0.5">${item.category}</p>
+            <p class="font-bold text-gray-900 mt-2">${formatPrice(item.price)}</p>
+          </div>
+          <div class="flex flex-col items-end justify-between">
+            <button onclick="removeFromCart('${item.id}')" class="text-gray-400 hover:text-red-500 transition text-lg">🗑</button>
+            <div class="flex items-center gap-2 border border-gray-200 rounded-lg">
+              <button onclick="updateQty('${item.id}', -1)" class="p-1.5 hover:bg-gray-50 rounded-l-lg px-2">−</button>
+              <span class="w-8 text-center text-sm font-medium">${item.quantity}</span>
+              <button onclick="updateQty('${item.id}', 1)" class="p-1.5 hover:bg-gray-50 rounded-r-lg px-2">+</button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderCheckout() {
+      if (cartCount() === 0) { showPage("cart"); return; }
+      document.getElementById("checkout-total").textContent = formatPrice(cartTotal());
+      document.getElementById("checkout-items").innerHTML = cart.map(item => `
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-600 truncate pr-2">${item.name} × ${item.quantity}</span>
+          <span class="font-medium shrink-0">${formatPrice(item.price * item.quantity)}</span>
+        </div>
+      `).join("");
+    }
+
+    // ========== PLACE ORDER (saves to Firebase) ==========
+    async function placeOrder(e) {
+      e.preventDefault();
+      if (cartCount() === 0) { toast("Your cart is empty"); return; }
+      const form = e.target;
+      const btn = document.getElementById("place-order-btn");
+      btn.disabled = true;
+      btn.textContent = "Placing Order...";
+
+      try {
+        await db.collection("orders").add({
+          items: cart,
+          total: cartTotal(),
+          customerName: form.name.value,
+          customerEmail: form.email.value,
+          customerPhone: form.phone.value,
+          address: form.address.value + ", " + form.city.value,
+          notes: form.notes.value || "",
+          status: "pending",
+          paymentMethod: "Pay on Delivery / Bank Transfer",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        cart = [];
+        saveCart();
+        toast("Order placed successfully! We will contact you soon.");
+        form.reset();
+        showPage("home");
+      } catch (err) {
+        console.error(err);
+        toast("Failed to place order. Please try again.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Place Order";
+      }
+    }
+
+    // ========== ADMIN ==========
+    function checkAdminAuth() {
+      auth.onAuthStateChanged(user => {
+        currentUser = user;
+        if (user && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+          document.getElementById("admin-login").classList.add("hidden");
+          document.getElementById("admin-dashboard").classList.remove("hidden");
+          document.getElementById("admin-email-display").textContent = user.email;
+          loadAdminData();
+        } else {
+          document.getElementById("admin-login").classList.remove("hidden");
+          document.getElementById("admin-dashboard").classList.add("hidden");
+        }
+      });
+    }
+
+    async function adminLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById("admin-email").value;
+      const password = document.getElementById("admin-password").value;
+      const btn = document.getElementById("admin-login-btn");
+      btn.disabled = true;
+      btn.textContent = "Signing in...";
+
+      try {
+        const cred = await auth.signInWithEmailAndPassword(email, password);
+        if (cred.user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+          await auth.signOut();
+          toast("Access denied. Admin only.");
+        } else {
+          toast("Welcome Admin!");
+        }
+      } catch (err) {
+        console.error(err);
+        toast(err.message || "Login failed");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+      }
+    }
+
+    async function adminLogout() {
+      await auth.signOut();
+      toast("Logged out");
+      showPage("admin");
+    }
+
+    function setAdminTab(tab) {
+      document.getElementById("admin-products-tab").classList.toggle("hidden", tab !== "products");
+      document.getElementById("admin-orders-tab").classList.toggle("hidden", tab !== "orders");
+      document.getElementById("tab-products").className = tab === "products"
+        ? "px-4 py-2.5 text-sm font-medium border-b-2 border-yellow-400 text-yellow-700"
+        : "px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500";
+      document.getElementById("tab-orders").className = tab === "orders"
+        ? "px-4 py-2.5 text-sm font-medium border-b-2 border-yellow-400 text-yellow-700"
+        : "px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500";
+    }
+
+    async function loadAdminData() {
+      try {
+        const [prodSnap, orderSnap] = await Promise.all([
+          db.collection("products").get(),
+          db.collection("orders").get()
+        ]);
+
+        const prods = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const orders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        document.getElementById("admin-product-count").textContent = prods.length;
+        document.getElementById("admin-order-count").textContent = orders.length;
+
+        // Products table
+        if (prods.length === 0) {
+          document.getElementById("admin-products-list").innerHTML = `<div class="text-center py-16 bg-gray-50 rounded-xl"><p class="text-gray-500">No products yet. Click "Seed Sample Products".</p></div>`;
+        } else {
+          document.getElementById("admin-products-list").innerHTML = `
+            <table class="w-full text-sm">
+              <thead><tr class="border-b text-left text-gray-500">
+                <th class="pb-3 pr-4">Product</th><th class="pb-3 pr-4">Category</th>
+                <th class="pb-3 pr-4">Price</th><th class="pb-3 pr-4">Stock</th><th class="pb-3">Actions</th>
+              </tr></thead>
+              <tbody>
+                ${prods.map(p => `
+                  <tr class="border-b border-gray-50">
+                    <td class="py-3 pr-4 font-medium text-gray-900">${p.name}</td>
+                    <td class="py-3 pr-4 text-gray-500">${p.category}</td>
+                    <td class="py-3 pr-4 font-medium">${formatPrice(p.price)}</td>
+                    <td class="py-3 pr-4">${p.stock}</td>
+                    <td class="py-3">
+                      <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:text-red-700">🗑</button>
+                    </td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>`;
+        }
+
+        // Orders
+        if (orders.length === 0) {
+          document.getElementById("admin-orders-list").innerHTML = `<div class="text-center py-16 bg-gray-50 rounded-xl"><p class="text-gray-500">No orders yet</p></div>`;
+        } else {
+          document.getElementById("admin-orders-list").innerHTML = orders.map(o => `
+            <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+              <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                <div>
+                  <p class="font-semibold text-gray-900">${o.customerName}</p>
+                  <p class="text-sm text-gray-500">${o.customerEmail} · ${o.customerPhone}</p>
+                  <p class="text-sm text-gray-500 mt-1">${o.address}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-lg">${formatPrice(o.total)}</p>
+                  <select onchange="updateOrderStatus('${o.id}', this.value)" class="mt-1 text-sm border border-gray-200 rounded-lg px-2 py-1">
+                    <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
+                    <option value="processing" ${o.status==='processing'?'selected':''}>Processing</option>
+                    <option value="shipped" ${o.status==='shipped'?'selected':''}>Shipped</option>
+                    <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
+                    <option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option>
+                  </select>
+                </div>
+              </div>
+              <div class="text-sm text-gray-600 border-t pt-3">
+                ${(o.items || []).map(i => `<div>${i.name} × ${i.quantity}</div>`).join("")}
+              </div>
+            </div>
+          `).join("");
+        }
+      } catch (err) {
+        console.error(err);
+        toast("Failed to load admin data");
+      }
+    }
+
+    async function addProduct(e) {
+      e.preventDefault();
+      try {
+        await db.collection("products").add({
+          name: document.getElementById("new-name").value,
+          description: document.getElementById("new-desc").value,
+          price: Number(document.getElementById("new-price").value),
+          stock: Number(document.getElementById("new-stock").value),
+          category: document.getElementById("new-category").value,
+          image: document.getElementById("new-image").value || "https://via.placeholder.com/400",
+          featured: document.getElementById("new-featured").checked,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        toast("Product added!");
+        document.getElementById("add-product-modal").classList.add("hidden");
+        e.target.reset();
+        await loadProducts();
+        loadAdminData();
+      } catch (err) {
+        console.error(err);
+        toast("Failed to add product");
+      }
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm("Delete this product?")) return;
+      try {
+        await db.collection("products").doc(id).delete();
+        toast("Product deleted");
+        await loadProducts();
+        loadAdminData();
+      } catch (err) {
+        toast("Failed to delete");
+      }
+    }
+
+    async function updateOrderStatus(id, status) {
+      try {
+        await db.collection("orders").doc(id).update({ status });
+        toast("Order updated");
+      } catch (err) {
+        toast("Update failed");
+      }
+    }
+
+    async function seedProducts() {
+      if (!confirm("This will add all sample products to Firestore. Continue?")) return;
+      const btn = document.getElementById("seed-btn");
+      btn.disabled = true;
+      btn.textContent = "Seeding...";
+      try {
+        for (const p of sampleProducts) {
+          await db.collection("products").add({
+            ...p,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        toast("Sample products added!");
+        await loadProducts();
+        loadAdminData();
+      } catch (err) {
+        console.error(err);
+        toast("Seeding failed");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Seed Sample Products";
+      }
+    }
+
+    // ========== INIT ==========
+    document.getElementById("year").textContent = new Date().getFullYear();
+    updateCartBadge();
+    // Load sample products immediately so store is never empty
+    useSampleProducts();
+    // Then try Firebase
+    loadProducts();
+  </script>
+</body>
+</html>
